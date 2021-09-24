@@ -1,0 +1,31 @@
+from typing import List, Optional
+from sqlmodel import Field, Relationship, Session, SQLModel
+from typing import TYPE_CHECKING, Optional
+
+   
+
+
+class TeamBase(SQLModel):
+    name: str
+    headquarters: str
+
+
+class Team(TeamBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+
+
+class TeamCreate(TeamBase):
+    pass
+
+
+class TeamRead(TeamBase):
+    id: int
+
+
+class TeamUpdate(SQLModel):
+    id: Optional[int] = None
+    name: Optional[str] = None
+    headquarters: Optional[str] = None
+
+
