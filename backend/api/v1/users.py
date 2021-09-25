@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 from backend.db.database import get_session
 from backend.api.dependencies import get_token
-from backend.features.users.user_models import Token, TokenData, UserRead, UserCreate,UserInDB
+from backend.features.users.user_models import Token, TokenData, UserRead, UserCreate,User
 from backend.features.users.user_service import UserService
 from backend.features.users.auth.auth_handler import AuthHandler
 
@@ -43,7 +43,7 @@ async def logout_access_token():
 @router.post("/register", response_model=UserRead)
 async def register_user(*, session: Session = Depends(get_session), user: UserCreate):    
     # check for username and email they must be unique
-    statement = select(UserInDB).where(or_(UserInDB.username == user.username, UserInDB.email ==  user.email))    
+    statement = select(User).where(or_(User.username == user.username, User.email ==  user.email))    
     results = session.exec(statement).first()
     print(results)
     if results != None:
