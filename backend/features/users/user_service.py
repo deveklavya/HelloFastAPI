@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 from typing import Optional
-
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -8,18 +7,13 @@ from passlib.context import CryptContext
 from sqlmodel import Session, select,  or_
 
 from.user_models import Token,TokenData,UserRead,UserInDB, UserCreate
+from .auth.auth_handler import AuthHandler
 
 
 class UserService:
-    def __init__(self, db_session,oauth2_scheme):    
-        # to get a string like this run:
-        # openssl rand -hex 32
-        self.SECRET_KEY = "42d2d8785d813173c4bbeeb378318240db313ce789eb376c67c9f10bf6f569ca"
-        self.ALGORITHM = "HS256"
-        self.ACCESS_TOKEN_EXPIRE_MINUTES = 30
+    def __init__(self, db_session):                   
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")        
         self.db = db_session
-        self.oauth2_scheme = oauth2_scheme
 
     def verify_password(self,plain_password, hashed_password):
         return self.pwd_context.verify(plain_password, hashed_password)
@@ -42,7 +36,7 @@ class UserService:
     def get_user(self, username: str):        
         statement = select(UserInDB).where(UserInDB.username == username)    
         return self.db.exec(statement).first()
-        #return UserRead(**user.dict())
+        
 
 
     def authenticate_user(self, username: str, password: str):
@@ -53,40 +47,25 @@ class UserService:
             return False
         return user
 
-
-    def create_access_token(self,data: dict, expires_delta: Optional[timedelta] = None):
-        to_encode = data.copy()
-        if expires_delta:
-            expire = datetime.utcnow() + expires_delta
-        else:
-            expire = datetime.utcnow() + timedelta(minutes=15)
-        to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
-        return encoded_jwt
-
-
-    def get_current_user(self):
-        credentials_exception = HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-        try:
-            payload = jwt.decode(self.oauth2_scheme, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+    async def get_current_user(self):
+        auth_handler = AuthHandler()
+        try:            
+            payload = auth_handler.decode_access_token() 
             username: str = payload.get("sub")
             if username is None:
-                raise credentials_exception
+                raise auth_handler.credentials_exception
             token_data = TokenData(username=username)
-        except JWTError:
-            raise credentials_exception
+        except:
+            raise auth_handler.credentials_exception
+
         user = self.get_user(username=token_data.username)       
         if user is None:
-            raise credentials_exception
+            raise auth_handler.credentials_exception
         return UserRead(**user.dict())
 
 
-    def get_current_active_user(self):
-        current_user = self.get_current_user()        
+    async def get_current_active_user(self):
+        current_user =  await self.get_current_user()        
         if current_user.disabled:
             raise HTTPException(status_code=400, detail="Inactive user")
         return current_user
