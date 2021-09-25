@@ -10,11 +10,13 @@ from backend.features.users.user_service import UserService
 
 
 router = APIRouter()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
+
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
 
-    user_service = UserService(session)
+    user_service = UserService(session,oauth2_scheme)
 
     user = user_service.authenticate_user(form_data.username, form_data.password)
     if not user:
@@ -38,16 +40,18 @@ async def register_user(*, session: Session = Depends(get_session), user: UserCr
     if results != None:
         raise HTTPException(status_code=404, detail="Duplicate username or email found ")        
     
-    user_service = UserService(session)
+    user_service = UserService(session,oauth2_scheme)
     return user_service.create_user(user)
     
 
 @router.get("/users/me/", response_model=UserRead)
-async def read_users_me(session: Session = Depends(get_session)):   
-    return UserService(session).get_current_active_user()
+async def read_users_me(session: Session = Depends(get_session),oauth2_scheme: str = Depends(oauth2_scheme)):       
+    user =  UserService(session,oauth2_scheme).get_current_active_user()
+    #print("Token", user.dict())
+    return user
 
 
 @router.get("/users/me/items/")
-async def read_own_items(session: Session = Depends(get_session)):
-    current_user = UserService(session).get_current_active_user()
+async def read_own_items(session: Session = Depends(get_session),oauth2_scheme: str = Depends(oauth2_scheme)):       
+    current_user = UserService(session,oauth2_scheme).get_current_active_user()
     return [{"item_id": "Foo", "owner": current_user.username}]

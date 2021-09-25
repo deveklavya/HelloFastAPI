@@ -11,15 +11,15 @@ from.user_models import Token,TokenData,UserRead,UserInDB, UserCreate
 
 
 class UserService:
-    def __init__(self, db_session):    
+    def __init__(self, db_session,oauth2_scheme):    
         # to get a string like this run:
         # openssl rand -hex 32
         self.SECRET_KEY = "42d2d8785d813173c4bbeeb378318240db313ce789eb376c67c9f10bf6f569ca"
         self.ALGORITHM = "HS256"
         self.ACCESS_TOKEN_EXPIRE_MINUTES = 30
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        self.oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")        
         self.db = db_session
+        self.oauth2_scheme = oauth2_scheme
 
     def verify_password(self,plain_password, hashed_password):
         return self.pwd_context.verify(plain_password, hashed_password)
@@ -32,16 +32,18 @@ class UserService:
         user.disabled = False
         
         usr = UserInDB(full_name= user.full_name, email= user.email, 
-                        username= user.username, hashed_password=self.get_password_hash(user.password), diabled=False)        
+                        username= user.username, hashed_password=self.get_password_hash(user.password), disabled=False)        
         
         self.db.add(usr)
         self.db.commit()
         self.db.refresh(usr)
         return usr
 
-    def get_user(self, username: str):
+    def get_user(self, username: str):        
         statement = select(UserInDB).where(UserInDB.username == username)    
         return self.db.exec(statement).first()
+        #return UserRead(**user.dict())
+
 
     def authenticate_user(self, username: str, password: str):
         user = self.get_user(username)
@@ -63,27 +65,28 @@ class UserService:
         return encoded_jwt
 
 
-    async def get_current_user(self):
+    def get_current_user(self):
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
         try:
-            payload = jwt.decode(self,self.oauth2_scheme, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            payload = jwt.decode(self.oauth2_scheme, self.SECRET_KEY, algorithms=[self.ALGORITHM])
             username: str = payload.get("sub")
             if username is None:
                 raise credentials_exception
             token_data = TokenData(username=username)
         except JWTError:
             raise credentials_exception
-        user = self.get_user(username=token_data.username)
+        user = self.get_user(username=token_data.username)       
         if user is None:
             raise credentials_exception
-        return user
+        return UserRead(**user.dict())
 
 
-    async def get_current_active_user(current_user: UserRead = Depends(get_current_user)):
+    def get_current_active_user(self):
+        current_user = self.get_current_user()        
         if current_user.disabled:
             raise HTTPException(status_code=400, detail="Inactive user")
         return current_user
