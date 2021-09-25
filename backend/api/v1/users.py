@@ -1,14 +1,16 @@
 from backend.features.users.auth.auth_handler import AuthHandler
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlmodel import Session, select,  or_
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 
 from backend.db.database import get_session
+from backend.api.dependencies import get_token
 from backend.features.users.user_models import Token, TokenData, UserRead, UserCreate,UserInDB
 from backend.features.users.user_service import UserService
-from backend.features.users import AuthHandler
+from backend.features.users.auth.auth_handler import AuthHandler
+
 
 
 router = APIRouter()
@@ -47,18 +49,14 @@ async def register_user(*, session: Session = Depends(get_session), user: UserCr
     if results != None:
         raise HTTPException(status_code=404, detail="Duplicate username or email found ")        
     
-    user_service = UserService(session,oauth2_scheme)
+    user_service = UserService(session)
     return user_service.create_user(user)
     
 
 @router.get("/users/me/", response_model=UserRead)
-async def read_users_me(session: Session = Depends(get_session)):       
-    user =  await UserService(session,oauth2_scheme).get_current_active_user()
+async def read_users_me(session: Session = Depends(get_session), token: str = Depends(get_token)):       
+    user =  await UserService(session, token).get_current_active_user()
     #print("Token", user.dict())
     return user
 
 
-@router.get("/users/me/items/")
-async def read_own_items(session: Session = Depends(get_session),oauth2_scheme: str = Depends(oauth2_scheme)):       
-    current_user = await UserService(session,oauth2_scheme).get_current_active_user()
-    return [{"item_id": "Foo", "owner": current_user.username}]

@@ -1,3 +1,4 @@
+import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import RedirectResponse
@@ -36,3 +37,7 @@ async def shutdown():
     #await database.disconnect()
 
 app.include_router(api_router, prefix="/api")
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000, access_log=True)

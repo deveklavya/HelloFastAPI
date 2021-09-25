@@ -4,6 +4,9 @@ from jose import JWTError, jwt
 from fastapi import HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
+
+import logging
+
 class AuthHandler:
     def __init__(self):  
         # to get a string like this run:
@@ -12,11 +15,11 @@ class AuthHandler:
         self.ALGORITHM = "HS256"   
         self.credentials_exception = HTTPException(
                                         status_code=status.HTTP_401_UNAUTHORIZED,
-                                        detail="Could not validate credentials",
+                                        detail="Could not validate credentials Bad token",
                                         headers={"WWW-Authenticate": "Bearer"},
                                     )     
         self.oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
-        self.ACCESS_TOKEN_EXPIRE_MINUTES= 5
+        self.ACCESS_TOKEN_EXPIRE_MINUTES= 50
 
 
     def create_access_token(self,data: dict, expires_delta: Optional[timedelta] = None):
@@ -34,10 +37,10 @@ class AuthHandler:
             "access_token": token
         }
 
-    def decode_access_token(self, token: Optional[str] = None):     
-        if(token == None):
-            token = self.oauth2_scheme
+    def decode_access_token(self, token: Optional[str] = None):             
         try:
+            logger = logging.getLogger(__name__)
+            logger.info("Token Value is : " + token)
             return jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
         except JWTError:
             raise self.credentials_exception 

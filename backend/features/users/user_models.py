@@ -26,13 +26,10 @@ class UserCreate(UserBase):
         assert v.isalnum(), 'must be alphanumeric'
         return v
 
-    
-
-
 class UserRead(UserBase): 
     pass
 
-class UserInDB(UserBase, table=True):
+class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     hashed_password: str
 
