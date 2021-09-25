@@ -5,12 +5,13 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from sqlmodel import Session, select,  or_
 
 from.user_models import Token,TokenData,UserRead,UserInDB, UserCreate
 
 
 class UserService:
-    def __init__(self,db_session):    
+    def __init__(self, db_session):    
         # to get a string like this run:
         # openssl rand -hex 32
         self.SECRET_KEY = "42d2d8785d813173c4bbeeb378318240db313ce789eb376c67c9f10bf6f569ca"
@@ -33,19 +34,17 @@ class UserService:
         usr = UserInDB(full_name= user.full_name, email= user.email, 
                         username= user.username, hashed_password=self.get_password_hash(user.password), diabled=False)        
         
-        self.session.add(usr)
-        self.session.commit()
-        self.session.refresh(usr)
+        self.db.add(usr)
+        self.db.commit()
+        self.db.refresh(usr)
         return usr
 
-    def get_user(self,db, username: str):
-        if username in db:
-            user_dict = db[username]
-            return UserInDB(**user_dict)
+    def get_user(self, username: str):
+        statement = select(UserInDB).where(UserInDB.username == username)    
+        return self.db.exec(statement).first()
 
-
-    def authenticate_user(self,fake_db, username: str, password: str):
-        user = self.get_user(fake_db, username)
+    def authenticate_user(self, username: str, password: str):
+        user = self.get_user(username)
         if not user:
             return False
         if not self.verify_password(password, user.hashed_password):

@@ -1,5 +1,6 @@
 from typing import List, Optional
-from sqlmodel import Field, Relationship, Session, SQLModel
+from sqlmodel import Field, Relationship,SQLModel
+from pydantic import validator
 
 class UserBase(SQLModel):    
     username: str
@@ -7,8 +8,25 @@ class UserBase(SQLModel):
     full_name: Optional[str] = None
     disabled: Optional[bool] = None    
 
+    @validator('username')
+    def username_alphanumeric(cls, v):
+        assert v.isalnum(), 'must be alphanumeric'
+        return v
+    
+    @validator('full_name')
+    def name_must_contain_space(cls, v):
+        if ' ' not in v:
+            raise ValueError('must contain a space')
+        return v.title()
+
 class UserCreate(UserBase): 
     password: str
+    @validator('password')
+    def passwords_alphanumeric(cls, v):
+        assert v.isalnum(), 'must be alphanumeric'
+        return v
+
+    
 
 
 class UserRead(UserBase): 

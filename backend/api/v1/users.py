@@ -1,11 +1,11 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import Session, select
+from sqlmodel import Session, select,  or_
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 
 from backend.db.database import get_session
-from backend.features.users.user_models import Token, TokenData, UserRead, UserCreate
+from backend.features.users.user_models import Token, TokenData, UserRead, UserCreate,UserInDB
 from backend.features.users.user_service import UserService
 
 
@@ -29,15 +29,18 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/", response_model=UserRead)
-async def register_user(*, session: Session = Depends(get_session), user: UserCreate):
-    
+@router.post("/register", response_model=UserRead)
+async def register_user(*, session: Session = Depends(get_session), user: UserCreate):    
     # check for username and email they must be unique
-
+    statement = select(UserInDB).where(or_(UserInDB.username == user.username, UserInDB.email ==  user.email))    
+    results = session.exec(statement).first()
+    print(results)
+    if results != None:
+        raise HTTPException(status_code=404, detail="Duplicate username or email found ")        
     
     user_service = UserService(session)
     return user_service.create_user(user)
-
+    
 
 @router.get("/users/me/", response_model=UserRead)
 async def read_users_me(session: Session = Depends(get_session)):   
