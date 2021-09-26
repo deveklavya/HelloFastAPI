@@ -21,6 +21,7 @@ class PortfolioDelete():
 class Portfolio(PortfolioBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     
-class PortfolioInstruments(SQLModel, table=True):
+class Portfolio_Instruments(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
     portfolio_id: int 
     instrument_id: int 

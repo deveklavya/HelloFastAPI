@@ -4,8 +4,8 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from passlib.context import CryptContext
 from sqlmodel import Session, select,  or_
 
-from features.instruments.instrument_models import Instrument, InstrumentCreate, InstrumentUpdate
-from features.portfolio.portfolio_models import PortfolioInstruments
+from backend.features.instruments.instrument_models import Instrument, InstrumentCreate, InstrumentUpdate
+from backend.features.portfolio.portfolio_models import Portfolio_Instruments
 
 
 class InstrumentService:
@@ -48,7 +48,7 @@ class InstrumentService:
         return True
 
     def delete_instruments_from_portfolio(self, instrument_id: int):
-        statement = select(PortfolioInstruments).where(PortfolioInstruments.instrument_id == instrument_id)
+        statement = select(Portfolio_Instruments).where(Portfolio_Instruments.instrument_id == instrument_id)
         results = self.db.exec(statement)
         all_ids = results.all()       
         if not all_ids:
